@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useHistory } from 'umi';
 import styles from './index.less';
 import globalState, { ClassifyEnum, ItemEntity } from '@/globalState';
+import { produce } from 'immer';
 
 /**
  * 主程序
@@ -21,52 +22,59 @@ export default () => {
   //添加事项
   const addItem = () => {
     //添加
-    const newItems = items.slice();
-    newItems.push({
-      id: createId(),
-      text: inputText,
-      finished: false,
-    });
-    setItems(newItems);
-
+    setItems(
+      produce(items, draft => {
+        draft.push({
+          id: createId(),
+          text: inputText,
+          finished: false,
+        });
+      }),
+    );
     //清除
     setInputText('');
   };
 
   //改变完成状态
   const toggleFinishedItem = (id: number, finished: boolean) => {
-    const newItems = items.slice();
-    const index = newItems.findIndex(item => item.id === id);
-    const newItem = Object.assign({}, newItems[index], { finished });
-    newItems[index] = newItem;
-    setItems(newItems);
+    setItems(
+      produce(items, draft => {
+        const index = draft.findIndex(item => item.id === id);
+        draft[index].finished = finished;
+      }),
+    );
   };
 
   //改变事项内容
   const modItem = (id: number, text: string) => {
-    const newItems = items.slice();
-    const index = newItems.findIndex(item => item.id === id);
-    const newItem = Object.assign({}, newItems[index], { text });
-    newItems[index] = newItem;
-    setItems(newItems);
+    setItems(
+      produce(items, draft => {
+        const index = draft.findIndex(item => item.id === id);
+        draft[index].text = text;
+      }),
+    );
   };
 
   //事项交换
   const exchangeItems = (id: number, toId: number) => {
-    const newItems = items.slice();
-    const index = newItems.findIndex(item => item.id === id);
-    const toIndex = newItems.findIndex(item => item.id === toId);
-    newItems[index] = items[toIndex];
-    newItems[toIndex] = items[index];
-    setItems(newItems);
+    setItems(
+      produce(items, draft => {
+        const index = draft.findIndex(item => item.id === id);
+        const toIndex = draft.findIndex(item => item.id === toId);
+        draft[index] = items[toIndex];
+        draft[toIndex] = items[index];
+      }),
+    );
   };
 
   //删除事项
   const deleteItem = (id: number) => {
-    const newItems = items.slice();
-    const index = newItems.findIndex(item => item.id === id);
-    newItems.splice(index, 1);
-    setItems(newItems);
+    setItems(
+      produce(items, draft => {
+        const index = draft.findIndex(item => item.id === id);
+        draft.splice(index, 1);
+      }),
+    );
   };
 
   useEffect(() => {
@@ -119,7 +127,7 @@ export default () => {
                 ? undefined
                 : () => exchangeItems(item.id, filterItems[index + 1].id)
             }
-            onClickDel= {()=> deleteItem(item.id)}
+            onClickDel={() => deleteItem(item.id)}
             onClickDetail={() => history.push(`/detail/${item.id}`)}
           />
         ))}
@@ -164,7 +172,7 @@ type ItemProps = {
   onClickUp?: () => void;
   onClickDown?: () => void;
   onClickDetail?: () => void;
-  onClickDel?:()=>void;
+  onClickDel?: () => void;
 };
 
 function Item(props: ItemProps) {

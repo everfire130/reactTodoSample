@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styles from './itemDetail.css';
-import { useParams, useRouteMatch, useHistory } from 'umi';
+import { useParams, useHistory } from 'umi';
 import globalState from '@/globalState';
 
 export default () => {
