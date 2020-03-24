@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import styles from './itemDetail.css';
-import { useParams, useHistory } from 'umi';
-import globalState from '@/globalState';
+import { useParams, useHistory, TodoModelState } from 'umi';
+import { useDispatch, useSelector } from 'dva';
+import { ItemEntity } from '@/globalState';
 
 export default () => {
   const history = useHistory();
   const parsms = useParams<{ id: string }>();
-  const item = globalState.items.find(
-    single => single.id === parseInt(parsms.id),
+  const dispatch = useDispatch();
+  const item = useSelector<{ todo: TodoModelState }, ItemEntity | undefined>(
+    state => state.todo.items.find(single => `${single.id}` === parsms.id),
   );
-
   const [inputText, setInputText] = useState(item?.text ?? '');
 
   return (
@@ -23,7 +24,13 @@ export default () => {
           //判断回车事件
           if (evt.keyCode === 13) {
             if (item) {
-              item.text = inputText;
+              dispatch({
+                type: 'todo/changeItemText',
+                payload: {
+                  id: parseInt(parsms.id),
+                  text: inputText,
+                },
+              });
             }
 
             alert('修改完成');

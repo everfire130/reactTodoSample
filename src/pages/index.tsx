@@ -1,86 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useHistory } from 'umi';
 import styles from './index.less';
-import globalState, { ClassifyEnum, ItemEntity } from '@/globalState';
-import { produce } from 'immer';
+import { ClassifyEnum } from '@/globalState';
+import { useDispatch, useSelector } from 'dva';
+import { TodoModelState } from '@/models/todo';
 
 /**
  * 主程序
  */
 export default () => {
+  const dispatch = useDispatch();
+
+  const todoState = useSelector<{ todo: TodoModelState }, TodoModelState>(
+    state => state.todo,
+  );
+
   //添加事项的Input状态
   const [inputText, setInputText] = useState('');
 
   //分类状态
-  const [classify, setClassify] = useState<ClassifyEnum>(ClassifyEnum.ALL);
+  const classify = todoState.classify;
 
   //事项状态
-  const [items, setItems] = useState<ItemEntity[]>(globalState.items);
+  const items = todoState.items;
 
   const history = useHistory();
 
   //添加事项
   const addItem = () => {
     //添加
-    setItems(
-      produce(items, draft => {
-        draft.push({
-          id: createId(),
-          text: inputText,
-          finished: false,
-        });
-      }),
-    );
+    dispatch({
+      type: 'todo/addItem',
+      payload: {
+        id: createId(),
+        text: inputText,
+        finished: false,
+      },
+    });
     //清除
     setInputText('');
   };
 
   //改变完成状态
   const toggleFinishedItem = (id: number, finished: boolean) => {
-    setItems(
-      produce(items, draft => {
-        const index = draft.findIndex(item => item.id === id);
-        draft[index].finished = finished;
-      }),
-    );
+    dispatch({
+      type: 'todo/changeItemFinished',
+      payload: {
+        id,
+        finished,
+      },
+    });
   };
 
   //改变事项内容
   const modItem = (id: number, text: string) => {
-    setItems(
-      produce(items, draft => {
-        const index = draft.findIndex(item => item.id === id);
-        draft[index].text = text;
-      }),
-    );
+    dispatch({
+      type: 'todo/changeItemText',
+      payload: {
+        id,
+        text,
+      },
+    });
   };
 
   //事项交换
   const exchangeItems = (id: number, toId: number) => {
-    setItems(
-      produce(items, draft => {
-        const index = draft.findIndex(item => item.id === id);
-        const toIndex = draft.findIndex(item => item.id === toId);
-        draft[index] = items[toIndex];
-        draft[toIndex] = items[index];
-      }),
-    );
+    dispatch({
+      type: 'todo/exchangeItems',
+      payload: {
+        id,
+        toId,
+      },
+    });
   };
 
   //删除事项
   const deleteItem = (id: number) => {
-    setItems(
-      produce(items, draft => {
-        const index = draft.findIndex(item => item.id === id);
-        draft.splice(index, 1);
-      }),
-    );
+    dispatch({
+      type: 'todo/delItem',
+      payload: {
+        id,
+      },
+    });
   };
 
-  useEffect(() => {
-    //同步数据
-    globalState.items = items;
-  }, [items]);
+  // useEffect(() => {
+  //   //同步数据
+  //   globalState.items = items;
+  // }, [items]);
 
   const filterItems = items.filter(item => {
     //分类
@@ -136,7 +143,12 @@ export default () => {
       <div>
         <button
           style={classify === ClassifyEnum.ALL ? { color: 'red' } : undefined}
-          onClick={() => setClassify(ClassifyEnum.ALL)}
+          onClick={() =>
+            dispatch({
+              type: 'todo/changeClassify',
+              payload: ClassifyEnum.ALL,
+            })
+          }
         >
           全部
         </button>
@@ -144,7 +156,12 @@ export default () => {
           style={
             classify === ClassifyEnum.UN_FINISHED ? { color: 'red' } : undefined
           }
-          onClick={() => setClassify(ClassifyEnum.UN_FINISHED)}
+          onClick={() =>
+            dispatch({
+              type: 'todo/changeClassify',
+              payload: ClassifyEnum.UN_FINISHED,
+            })
+          }
         >
           未完成
         </button>
@@ -152,7 +169,12 @@ export default () => {
           style={
             classify === ClassifyEnum.FINISHED ? { color: 'red' } : undefined
           }
-          onClick={() => setClassify(ClassifyEnum.FINISHED)}
+          onClick={() =>
+            dispatch({
+              type: 'todo/changeClassify',
+              payload: ClassifyEnum.FINISHED,
+            })
+          }
         >
           已完成
         </button>
