@@ -24,8 +24,6 @@ export default () => {
   //事项状态
   const items = todoState.items;
 
-  const history = useHistory();
-
   //添加事项
   const addItem = () => {
     //添加
@@ -40,54 +38,6 @@ export default () => {
     //清除
     setInputText('');
   };
-
-  //改变完成状态
-  const toggleFinishedItem = (id: number, finished: boolean) => {
-    dispatch({
-      type: 'todo/changeItemFinished',
-      payload: {
-        id,
-        finished,
-      },
-    });
-  };
-
-  //改变事项内容
-  const modItem = (id: number, text: string) => {
-    dispatch({
-      type: 'todo/changeItemText',
-      payload: {
-        id,
-        text,
-      },
-    });
-  };
-
-  //事项交换
-  const exchangeItems = (id: number, toId: number) => {
-    dispatch({
-      type: 'todo/exchangeItems',
-      payload: {
-        id,
-        toId,
-      },
-    });
-  };
-
-  //删除事项
-  const deleteItem = (id: number) => {
-    dispatch({
-      type: 'todo/delItem',
-      payload: {
-        id,
-      },
-    });
-  };
-
-  // useEffect(() => {
-  //   //同步数据
-  //   globalState.items = items;
-  // }, [items]);
 
   const filterItems = items.filter(item => {
     //分类
@@ -119,23 +69,14 @@ export default () => {
       <ul>
         {filterItems.map((item, index) => (
           <Item
+            id={item.id}
             key={item.id}
             text={item.text}
             finished={item.finished}
-            onChangeText={text => modItem(item.id, text)}
-            onChangeFinished={finished => toggleFinishedItem(item.id, finished)}
-            onClickUp={
-              index === 0
-                ? undefined
-                : () => exchangeItems(item.id, filterItems[index - 1].id)
+            upToId={index === 0 ? undefined : filterItems[index - 1].id}
+            downToId={
+              index === items.length - 1 ? undefined : filterItems[index + 1].id
             }
-            onClickDown={
-              index === items.length - 1
-                ? undefined
-                : () => exchangeItems(item.id, filterItems[index + 1].id)
-            }
-            onClickDel={() => deleteItem(item.id)}
-            onClickDetail={() => history.push(`/detail/${item.id}`)}
           />
         ))}
       </ul>
@@ -187,27 +128,84 @@ export default () => {
  * 事项组件
  */
 type ItemProps = {
+  id: number;
   text: string;
   finished: boolean;
-  onChangeText: (text: string) => void;
-  onChangeFinished: (finished: boolean) => void;
-  onClickUp?: () => void;
-  onClickDown?: () => void;
-  onClickDetail?: () => void;
-  onClickDel?: () => void;
+
+  //使用id精准交换
+  upToId?: number;
+  downToId?: number;
 };
 
-function Item(props: ItemProps) {
-  const {
-    text,
-    finished,
-    onChangeText,
-    onChangeFinished,
-    onClickUp,
-    onClickDown,
-    onClickDetail,
-    onClickDel,
-  } = props;
+/**
+ * memo浅对比，数据未改变，不render
+ * 将方法放到内部，避免重复创建新function导致的浅对比与预测不相符的问题
+ */
+const Item = memo(function(props: ItemProps) {
+  const { id, text, finished, upToId, downToId } = props;
+
+  const dispatch = useDispatch();
+  const history = useHistory();
+
+  const onChangeFinished = (finished: boolean) => {
+    dispatch({
+      type: 'todo/changeItemFinished',
+      payload: {
+        id,
+        finished,
+      },
+    });
+  };
+
+  const onChangeText = (text: string) => {
+    dispatch({
+      type: 'todo/changeItemText',
+      payload: {
+        id,
+        text,
+      },
+    });
+  };
+
+  const onClickUp = upToId
+    ? () => {
+        dispatch({
+          type: 'todo/exchangeItems',
+          payload: {
+            id,
+            toId: upToId,
+          },
+        });
+      }
+    : undefined;
+
+  const onClickDown = downToId
+    ? () => {
+        dispatch({
+          type: 'todo/exchangeItems',
+          payload: {
+            id,
+            toId: downToId,
+          },
+        });
+      }
+    : undefined;
+
+  const onClickDel = () => {
+    dispatch({
+      type: 'todo/delItem',
+      payload: {
+        id,
+      },
+    });
+  };
+
+  const onClickDetail = () => {
+    history.push(`/detail/${id}`);
+  };
+
+  //测试render次数。去掉memo可以发现只要其中一个地方修改所有Item都跑render了
+  console.count(`render:${id}`);
 
   return (
     <li>
@@ -229,7 +227,7 @@ function Item(props: ItemProps) {
       <button onClick={onClickDel}>删除</button>
     </li>
   );
-}
+});
 
 //唯一id创建方法
 let __id = 10000;
